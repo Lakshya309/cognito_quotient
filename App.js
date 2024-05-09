@@ -6,6 +6,7 @@ import Disc from './screens/Disc';
 import Option from './screens/Option';
 import Quiz from './screens/Quiz';
 import Try from './screens/Try';
+import Result from './screens/Result';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,7 @@ export default function App() {
       <Stack.Screen name="disclaimer" component={Disc} />
       <Stack.Screen name="iqqiz" component={Quiz}  />
       <Stack.Screen name="a" component={Try}  />
+      <Stack.Screen name="result" component={Result}  />
     </Stack.Navigator>
     </NavigationContainer>
   );

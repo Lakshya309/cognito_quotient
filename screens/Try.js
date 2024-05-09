@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useLayoutEffect } from 'react';
 import { SafeAreaView, View, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
-import {useLayoutEffect} from 'react'
+import { useNavigation } from '@react-navigation/native';
 import { Camera } from 'expo-camera';
-import { RTCView } from 'expo-av';
-import { useNavigation } from '@react-navigation/native'
-import * as Permissions from 'expo-permissions';
-import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import axios from 'axios';
 
 // Import theme colors and sizes
 import { COLORS, SIZES } from '../constants/theme';
 
 // Import quiz data
-import quizData from '../data/EQquizdata'
+import quizData from '../data/EQquizdata';
 
 const Try = () => {
     const navigation = useNavigation();
@@ -24,9 +21,8 @@ const Try = () => {
         )
     }, [])
     const [isRecording, setIsRecording] = useState(false);
-    const [streamURL, setStreamURL] = useState(null);
+    const [recordingInstance, setRecordingInstance] = useState(null);
     const [hasCameraPermission, setHasCameraPermission] = useState(null);
-    const [hasAudioPermission, setHasAudioPermission] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
     useEffect(() => {
@@ -42,60 +38,56 @@ const Try = () => {
     // Function to start recording
     const startRecording = async () => {
         setIsRecording(true);
-        // Start recording logic
+        try {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission denied', 'Camera permission is required to record video.');
+                setIsRecording(false);
+                return;
+            }
+            const recording = new Camera.Recording();
+            await recording.prepareToRecordAsync(Camera.Constants.VideoQuality['1080p']);
+            await recording.startAsync();
+            setRecordingInstance(recording); // Store recording instance to access later
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            setIsRecording(false);
+            Alert.alert('Error', 'Failed to start recording. Please try again.');
+        }
     };
 
     // Function to stop recording
     const stopRecording = async () => {
         setIsRecording(false);
-        // Stop recording logic
+        if (recordingInstance) {
+            try {
+                await recordingInstance.stopAndUnloadAsync();
+                const videoUri = recordingInstance.getURI();
+                await saveRecording(videoUri);
+            } catch (error) {
+                console.error('Error stopping recording:', error);
+                Alert.alert('Error', 'Failed to stop recording. Please try again.');
+            }
+        }
     };
 
-    // Function to handle saving video and audio recordings
-    const saveRecording = async (videoUri, audioUri) => {
+    // Function to handle saving video recording
+    const saveRecording = async (videoUri) => {
         try {
-            // Create directory for recordings if it doesn't exist
             const recordingDirectory = `${FileSystem.documentDirectory}recordings`;
             await FileSystem.makeDirectoryAsync(recordingDirectory, { intermediates: true });
-
-            // Generate unique filenames for video and audio recordings
             const timestamp = new Date().getTime();
             const videoFilename = `${timestamp}.mp4`;
-            const audioFilename = `${timestamp}.m4a`;
-
-            // Move video recording to the recordings directory
             await FileSystem.moveAsync({
                 from: videoUri,
                 to: `${recordingDirectory}/${videoFilename}`,
             });
-
-            // Move audio recording to the recordings directory
-            await FileSystem.moveAsync({
-                from: audioUri,
-                to: `${recordingDirectory}/${audioFilename}`,
-            });
-
-            // Save recording details to quizData
-            quizData[currentQuestionIndex].videoRecording = `${recordingDirectory}/${videoFilename}`;
-            quizData[currentQuestionIndex].audioRecording = `${recordingDirectory}/${audioFilename}`;
-
-            // Show success message
+            // Optionally, you can send the video to a backend here
             Alert.alert('Recording Saved', 'Your recording has been saved successfully.');
-
         } catch (error) {
             console.error('Error saving recording:', error);
             Alert.alert('Error', 'Failed to save recording. Please try again.');
         }
-    };
-
-    // Function to handle submitting answer
-    const submitAnswer = async () => {
-        // Placeholder for video and audio recording URIs
-        const videoUri = 'placeholder-video-uri';
-        const audioUri = 'placeholder-audio-uri';
-
-        // Save recording
-        await saveRecording(videoUri, audioUri);
     };
 
     // Function to handle moving to the next question
@@ -104,9 +96,19 @@ const Try = () => {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
             // Handle quiz completion
-            Alert.alert('Quiz Completed', 'You have completed the quiz.');
+            Alert.alert(
+                'Quiz Completed',
+                'You have completed the quiz.',
+                [
+                    {
+                        text: 'Results',
+                        onPress: () => navigation.navigate('result') // Navigate to Result screen
+                    }
+                ]
+            );
         }
     };
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -119,13 +121,6 @@ const Try = () => {
             {isRecording && hasCameraPermission && (
                 <View style={styles.cameraPreview}>
                     <Camera style={{ flex: 1 }} type={Camera.Constants.Type.front} />
-                </View>
-            )}
-
-            {/* Conditional rendering for incoming video stream */}
-            {!isRecording && streamURL && (
-                <View style={styles.videoStream}>
-                    <RTCView streamURL={streamURL} style={{ flex: 1 }} />
                 </View>
             )}
 
@@ -175,9 +170,6 @@ const styles = StyleSheet.create({
     cameraPreview: {
         flex: 1,
     },
-    videoStream: {
-        flex: 1,
-    },
     actionButton: {
         backgroundColor: COLORS.primary,
         padding: SIZES.base * 2,
@@ -200,4 +192,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Try
+export default Try;
