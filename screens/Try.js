@@ -1,9 +1,9 @@
-import React, { useState, useEffect , useLayoutEffect } from 'react';
+import React, { useState, useEffect , useLayoutEffect,useRef} from 'react';
 import { SafeAreaView, View, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera,CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system';
-import { Video } from 'expo-av';
+import { Audio,Video } from 'expo-av';
 import axios from 'axios';
 
 // Import theme colors and sizes
@@ -25,20 +25,25 @@ const Try = () => {
     const [hasAudioPermission, setHasAudioPermission] = useState(null);
     const [hasCameraPermission, setHasCameraPermission] =useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [camera, setCamera] = useState(null);
     const [record, setRecord] = useState(null);
-    const [type, setType] = useState(Camera.Constants.Type.back);
+    const cameraRef = useRef(null);
+    //const [type, setType] = useState(Camera.Constants.Type.back);
 
     useEffect(() => {
         (async () => {
             const [cameraStatus, audioStatus] = await Promise.all([
                 Camera.requestCameraPermissionsAsync(),
                 Camera.requestMicrophonePermissionsAsync(),
+                Audio.requestPermissionsAsync(),
+                //Video.requestPermissionsAsync()
             ]);
             setHasCameraPermission(cameraStatus.status === 'granted');
             setHasAudioPermission(audioStatus.status === 'granted');
+            //setCamera(cameraStatus.status === 'granted' && audioStatus.status === 'granted');
+            
         })();
     }, []);
+    
     
 
     // Function to start recording
@@ -51,11 +56,11 @@ const Try = () => {
                 return;
             }
     
-            if(camera){
-                const data = await camera.recordAsync();
-                setRecord(data.uri);
-                console.log(data.uri);
-            }
+
+            const data = await cameraRef.current.recordasync();
+            setRecord(data.uri);
+            console.log(data.uri);
+
         } catch (error) {
             console.error('Error starting recording:', error);
             setIsRecording(false);
@@ -66,16 +71,19 @@ const Try = () => {
 
     // Function to stop recording
     const stopRecording = async () => {
-        setIsRecording(false);
-
+        if (cameraRef.current) {
             try {
+                await cameraRef.current.stopRecording();
+                console.log('Recording stopped');
+                setIsRecording(false);
+
                 const videoUri = data.uri
                 await saveRecording(videoUri);
             } catch (error) {
                 console.error('Error stopping recording:', error);
                 Alert.alert('Error', 'Failed to stop recording. Please try again.');
             }
-        
+        }
     };
 
     // Function to handle saving video recording
@@ -125,9 +133,9 @@ const Try = () => {
             </View>
 
             {/* Conditional rendering for camera preview */}
-            {isRecording && hasCameraPermission && (
+            {isRecording && hasCameraPermission && hasAudioPermission &&(
                 <View style={styles.cameraPreview}>
-                    <Camera style={{ flex: 1 }} type={Camera.Constants.Type.front} />
+                    <Camera style={{ flex: 1 }} type={Camera.Constants.Type.front} ref={cameraRef}/>
                 </View>
             )}
 
