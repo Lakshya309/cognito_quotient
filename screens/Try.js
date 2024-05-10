@@ -1,8 +1,9 @@
 import React, { useState, useEffect , useLayoutEffect } from 'react';
 import { SafeAreaView, View, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Camera } from 'expo-camera';
+import { Camera,CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system';
+import { Video } from 'expo-av';
 import axios from 'axios';
 
 // Import theme colors and sizes
@@ -21,54 +22,60 @@ const Try = () => {
         )
     }, [])
     const [isRecording, setIsRecording] = useState(false);
-    const [recordingInstance, setRecordingInstance] = useState(null);
-    const [hasCameraPermission, setHasCameraPermission] = useState(null);
+    const [hasAudioPermission, setHasAudioPermission] = useState(null);
+    const [hasCameraPermission, setHasCameraPermission] =useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [camera, setCamera] = useState(null);
+    const [record, setRecord] = useState(null);
+    const [type, setType] = useState(Camera.Constants.Type.back);
 
     useEffect(() => {
-        // Request camera permission
-        const requestCameraPermission = async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setHasCameraPermission(status === 'granted');
-        };
-
-        requestCameraPermission();
+        (async () => {
+            const [cameraStatus, audioStatus] = await Promise.all([
+                Camera.requestCameraPermissionsAsync(),
+                Camera.requestMicrophonePermissionsAsync(),
+            ]);
+            setHasCameraPermission(cameraStatus.status === 'granted');
+            setHasAudioPermission(audioStatus.status === 'granted');
+        })();
     }, []);
+    
 
     // Function to start recording
     const startRecording = async () => {
         setIsRecording(true);
         try {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permission denied', 'Camera permission is required to record video.');
+            if (!hasCameraPermission || !hasAudioPermission) {
+                Alert.alert('Permission denied', 'Camera and microphone permissions are required to record video with audio.');
                 setIsRecording(false);
                 return;
             }
-            const recording = new Camera.Recording();
-            await recording.prepareToRecordAsync(Camera.Constants.VideoQuality['1080p']);
-            await recording.startAsync();
-            setRecordingInstance(recording); // Store recording instance to access later
+    
+            if(camera){
+                const data = await camera.recordAsync();
+                setRecord(data.uri);
+                console.log(data.uri);
+            }
         } catch (error) {
             console.error('Error starting recording:', error);
             setIsRecording(false);
             Alert.alert('Error', 'Failed to start recording. Please try again.');
         }
     };
+    
 
     // Function to stop recording
     const stopRecording = async () => {
         setIsRecording(false);
-        if (recordingInstance) {
+
             try {
-                await recordingInstance.stopAndUnloadAsync();
-                const videoUri = recordingInstance.getURI();
+                const videoUri = data.uri
                 await saveRecording(videoUri);
             } catch (error) {
                 console.error('Error stopping recording:', error);
                 Alert.alert('Error', 'Failed to stop recording. Please try again.');
             }
-        }
+        
     };
 
     // Function to handle saving video recording
