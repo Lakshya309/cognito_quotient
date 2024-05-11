@@ -55,16 +55,27 @@ const Try = () => {
                 setIsRecording(false);
                 return;
             }
-    
-
-            const data = await cameraRef.current.recordasync();
-            setRecord(data.uri);
+            if (!cameraRef.current) {
+                Alert.alert('No cam','Camera reference is null');
+                setIsRecording(false);
+                return;
+            }
+            
+            const data = await cameraRef.current.recordAsync();
+            recordingUri = data.uri; // Store the recording URI
+            
             console.log(data.uri);
 
         } catch (error) {
             console.error('Error starting recording:', error);
             setIsRecording(false);
             Alert.alert('Error', 'Failed to start recording. Please try again.');
+        }
+        finally {
+            if (!recordingUri) {
+                setRecord(recordingUri);
+                Alert.alert('No data', 'No recorded!!');
+            }
         }
     };
     
@@ -76,9 +87,11 @@ const Try = () => {
                 await cameraRef.current.stopRecording();
                 console.log('Recording stopped');
                 setIsRecording(false);
-
-                const videoUri = data.uri
-                await saveRecording(videoUri);
+                if (!record) { // Check if URI is available
+                    Alert.alert('No data', 'No data recorded');
+                    return;
+                }
+                await saveRecording(record);
             } catch (error) {
                 console.error('Error stopping recording:', error);
                 Alert.alert('Error', 'Failed to stop recording. Please try again.');
@@ -93,6 +106,18 @@ const Try = () => {
             await FileSystem.makeDirectoryAsync(recordingDirectory, { intermediates: true });
             const timestamp = new Date().getTime();
             const videoFilename = `${timestamp}.mp4`;
+            if(!videoUri){
+                Alert.alert('No video','No video recorded');
+                return;
+            }
+            if(!videoFilename){
+                Alert.alert('No filename','No filename');
+                return;
+            }
+            if(!recordingDirectory){
+                Alert.alert('No directory','No directory');
+                return;
+            }
             await FileSystem.moveAsync({
                 from: videoUri,
                 to: `${recordingDirectory}/${videoFilename}`,
@@ -133,14 +158,14 @@ const Try = () => {
             </View>
 
             {/* Conditional rendering for camera preview */}
-            {isRecording && hasCameraPermission && hasAudioPermission &&(
+            {hasCameraPermission && hasAudioPermission &&(
                 <View style={styles.cameraPreview}>
                     <Camera style={{ flex: 1 }} type={Camera.Constants.Type.front} ref={cameraRef}/>
                 </View>
             )}
 
             {/* Button to start recording */}
-            {!isRecording && (
+            {hasCameraPermission && hasAudioPermission && !isRecording && (
                 <TouchableOpacity onPress={startRecording}>
                     <View style={[styles.actionButton, { backgroundColor: COLORS.success }]}>
                         <Text style={styles.buttonText}>Start Recording</Text>
