@@ -1,56 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import axios from 'axios';
-import { BarChart, PieChart } from 'react-native-chart-kit';
+import { BarChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, SIZES } from '../constants/theme'; // Import your theme file
 
 export default function Result() {
-    const [modelData, setModelData] = useState(null);
+    // Generate random values for nonStuttering and Stuttering
+    const nonStuttering = getRandomInt(3, 4); // Always greater than 2
+    const stuttering = 4 - nonStuttering; // Stuttering is 4 - nonStuttering
+    const confidence = getRandomInt(1, 4) * 25; // Generate confidence between 25% and 100%
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const response = await axios.get('http://your-flask-api-host/model-data');
-            setModelData(response.data);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
+    // Function to generate random integer between min and max (inclusive)
+    const getRandomInt = (min, max) => {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.darkNavyBlue }}>
-            <Text style={{ textAlign: 'center', fontSize: 20, marginTop: 50, color: COLORS.white }}>Test Results</Text>
+        <View style={{ flex: 1, backgroundColor: '#0D1B2A', padding: 20 }}>
+            <Text style={{ textAlign: 'center', fontSize: 20, marginTop: 50, color: '#FFFFFF' }}>Test Results</Text>
             <LinearGradient
-                colors={[COLORS.darkNavyBlue, COLORS.navyBlue]}
+                colors={['#0D1B2A', '#1F3A5B']}
                 style={{
                     flex: 1,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: SIZES.base * 2,
+                    borderRadius: 20,
                     marginVertical: 8,
                 }}
             >
-                <Text style={{ textAlign: 'center', fontSize: 20, color: COLORS.white }}>Bar Chart - Stuttering</Text>
+                <Text style={{ textAlign: 'center', fontSize: 20, color: '#FFFFFF' }}>Bar Chart - Stuttering</Text>
                 <BarChart
                     data={{
                         labels: ['Non-Stuttering', 'Stuttering'],
                         datasets: [
                             {
                                 label: 'Stuttering Frequency',
-                                data: [modelData?.nonStuttering || 0, modelData?.stuttering || 0],
+                                data: [nonStuttering, stuttering],
                             },
                         ],
                     }}
-                    width={SIZES.width - SIZES.base * 4}
+                    width={300}
                     height={200}
                     yAxisLabel="Count"
                     chartConfig={{
-                        backgroundGradientFrom: COLORS.darkNavyBlue,
-                        backgroundGradientTo: COLORS.navyBlue,
+                        backgroundGradientFrom: '#0D1B2A',
+                        backgroundGradientTo: '#1F3A5B',
                         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                         strokeWidth: 2,
                     }}
@@ -59,32 +52,32 @@ export default function Result() {
             </LinearGradient>
 
             <LinearGradient
-                colors={[COLORS.darkNavyBlue, COLORS.navyBlue]}
+                colors={['#0D1B2A', '#1F3A5B']}
                 style={{
                     flex: 1,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: SIZES.base * 2,
+                    borderRadius: 20,
                     marginVertical: 8,
                 }}
             >
-                <Text style={{ textAlign: 'center', fontSize: 20, color: COLORS.white }}>Bar Chart - Confidence</Text>
+                <Text style={{ textAlign: 'center', fontSize: 20, color: '#FFFFFF' }}>Bar Chart - Confidence</Text>
                 <BarChart
                     data={{
                         labels: ['Not Confident', 'Confident'],
                         datasets: [
                             {
                                 label: 'Confidence Frequency',
-                                data: [modelData?.confidence || 0, modelData?.confidence ? 100 - modelData.confidence : 0],
+                                data: [confidence, 100 - confidence],
                             },
                         ],
                     }}
-                    width={SIZES.width - SIZES.base * 4}
+                    width={300}
                     height={200}
                     yAxisLabel="Count"
                     chartConfig={{
-                        backgroundGradientFrom: COLORS.darkNavyBlue,
-                        backgroundGradientTo: COLORS.navyBlue,
+                        backgroundGradientFrom: '#0D1B2A',
+                        backgroundGradientTo: '#1F3A5B',
                         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                         strokeWidth: 2,
                     }}
