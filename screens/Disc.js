@@ -7,17 +7,18 @@ import Box from '../components.js/Box';
 
 
 export default function Disc() {
+  const navigation = useNavigation();
+  useLayoutEffect(() => {
+      navigation.setOptions(
+        {
+         headerShown : false, 
+        }
+      )
+  }, [])
     
       
     
-    const navigation = useNavigation();
-    useLayoutEffect(() => {
-        navigation.setOptions(
-          {
-           headerShown : false, 
-          }
-        )
-    }, [])
+   
   return (
     
       
