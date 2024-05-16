@@ -1,69 +1,74 @@
 import React, { useState } from 'react';
-import { View, Button, Alert, Text } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
+import { View, Button, Image, StyleSheet, Text } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
 
-const TestUpload = () => {
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [uploadResult, setUploadResult] = useState(null);
+const FileUpload = () => {
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  const handlePickDocument = async () => {
-    try {
-      const document = await DocumentPicker.getDocumentAsync({ type: 'video/*' });
-      setSelectedVideo(document);
-    } catch (error) {
-      console.error('Error picking document:', error);
-      Alert.alert('Error', 'Failed to pick document. Please try again.');
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
     }
   };
 
-  const handleUploadVideo = async () => {
-    if (!selectedVideo) {
-        Alert.alert('Error', 'Please select a video file first.');
-        return;
+  const uploadImage = async () => {
+    if (!selectedImage) {
+      alert('Please select a file.');
+      return;
     }
 
     const formData = new FormData();
-    formData.append('video', selectedVideo.uri);
+    formData.append('video', {
+      uri: selectedImage,
+      type: 'video/mp4',
+      name: 'video.mp4',
+    });
 
     try {
-        const apiUrl = 'http://192.168.1.19:5000/upload';
-
-        const response = await Promise.race([
-            fetch(apiUrl, {
-                method: 'POST',
-                body: formData
-            }),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout')), 90000) // Set timeout to 90 seconds
-            )
-        ]);
-        
-        if (response.ok) {
-            console.log(selectedVideo.uri)
-            console.log('upload success',response)
-            const data = await response.json();
-            setUploadResult(data);
-        } else {
-            throw new Error('Network response was not ok.');
-        }
+      const response = await axios.post(' http://192.168.1.19:5000/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('Response from server:', response.data);
     } catch (error) {
-        console.error('Error uploading video:', error);
-        Alert.alert('Error', error.message);
+      console.error('Error uploading image:', error);
     }
-};
+  };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Button title="Pick Video" onPress={handlePickDocument} />
-      <Button title="Upload Video" onPress={handleUploadVideo} />
-      {uploadResult && (
-        <View>
-          <Text>Upload Result:</Text>
-          <Text>{JSON.stringify(uploadResult)}</Text>
-        </View>
-      )}
+    <View style={styles.container}>
+      <Text style={styles.header}>Upload File</Text>
+      <Button title="Pick a Video" onPress={pickImage} />
+      {selectedImage && <Image source={{ uri: selectedImage }} style={styles.image} />}
+      <Button title="Upload" onPress={uploadImage} />
     </View>
   );
 };
 
-export default TestUpload;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  header: {
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    marginVertical: 20,
+  },
+});
+
+export default FileUpload;
